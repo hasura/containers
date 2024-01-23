@@ -7,3 +7,8 @@ benchmarks: True
 
 -- package containers-tests
 --   ghc-options: -Werror
+
+source-repository-package
+  type: git
+  location: https://github.com/hasura/binary
+  tag: 3b5d8a9a108325b5d86f837e8039b522324b9761

@@ -429,6 +429,9 @@ import qualified Control.Category as Category
 import Data.Coerce
 #endif
 
+import GHC.Stack
+import Control.Monad (guard)
+
 
 {--------------------------------------------------------------------
   Operators
@@ -786,7 +789,7 @@ singleton k x = Bin 1 k x Tip Tip
 
 -- See Note: Type of local 'go' function
 -- See Note: Avoiding worker/wrapper
-insert :: Ord k => k -> a -> Map k a -> Map k a
+insert :: HasCallStack => Ord k => k -> a -> Map k a -> Map k a
 insert kx0 = go kx0 kx0
   where
     -- Unlike insertR, we only get sharing here
@@ -835,7 +838,7 @@ lazy a = a
 
 -- See Note: Type of local 'go' function
 -- See Note: Avoiding worker/wrapper
-insertR :: Ord k => k -> a -> Map k a -> Map k a
+insertR :: HasCallStack => Ord k => k -> a -> Map k a -> Map k a
 insertR kx0 = go kx0 kx0
   where
     go :: Ord k => k -> k -> a -> Map k a -> Map k a
@@ -865,7 +868,7 @@ insertR kx0 = go kx0 kx0
 -- > insertWith (++) 7 "xxx" (fromList [(5,"a"), (3,"b")]) == fromList [(3, "b"), (5, "a"), (7, "xxx")]
 -- > insertWith (++) 5 "xxx" empty                         == singleton 5 "xxx"
 
-insertWith :: Ord k => (a -> a -> a) -> k -> a -> Map k a -> Map k a
+insertWith :: HasCallStack => Ord k => (a -> a -> a) -> k -> a -> Map k a -> Map k a
 insertWith = go
   where
     -- We have no hope of making pointer equality tricks work
@@ -891,7 +894,7 @@ insertWith = go
 -- function is flipped--it is applied to the old value and then the
 -- new value.
 
-insertWithR :: Ord k => (a -> a -> a) -> k -> a -> Map k a -> Map k a
+insertWithR :: HasCallStack => Ord k => (a -> a -> a) -> k -> a -> Map k a -> Map k a
 insertWithR = go
   where
     go :: Ord k => (a -> a -> a) -> k -> a -> Map k a -> Map k a
@@ -920,7 +923,7 @@ insertWithR = go
 -- > insertWithKey f 5 "xxx" empty                         == singleton 5 "xxx"
 
 -- See Note: Type of local 'go' function
-insertWithKey :: Ord k => (k -> a -> a -> a) -> k -> a -> Map k a -> Map k a
+insertWithKey :: HasCallStack => Ord k => (k -> a -> a -> a) -> k -> a -> Map k a -> Map k a
 insertWithKey = go
   where
     go :: Ord k => (k -> a -> a -> a) -> k -> a -> Map k a -> Map k a
@@ -940,7 +943,7 @@ insertWithKey = go
 -- the map, the key is left alone, not replaced. The combining
 -- function is flipped--it is applied to the old value and then the
 -- new value.
-insertWithKeyR :: Ord k => (k -> a -> a -> a) -> k -> a -> Map k a -> Map k a
+insertWithKeyR :: HasCallStack => Ord k => (k -> a -> a -> a) -> k -> a -> Map k a -> Map k a
 insertWithKeyR = go
   where
     go :: Ord k => (k -> a -> a -> a) -> k -> a -> Map k a -> Map k a
@@ -973,7 +976,7 @@ insertWithKeyR = go
 -- > insertLookup 7 "x" (fromList [(5,"a"), (3,"b")]) == (Nothing,  fromList [(3, "b"), (5, "a"), (7, "x")])
 
 -- See Note: Type of local 'go' function
-insertLookupWithKey :: Ord k => (k -> a -> a -> a) -> k -> a -> Map k a
+insertLookupWithKey :: HasCallStack => Ord k => (k -> a -> a -> a) -> k -> a -> Map k a
                     -> (Maybe a, Map k a)
 insertLookupWithKey f0 k0 x0 = toPair . go f0 k0 x0
   where
@@ -1005,7 +1008,7 @@ insertLookupWithKey f0 k0 x0 = toPair . go f0 k0 x0
 -- > delete 5 empty                         == empty
 
 -- See Note: Type of local 'go' function
-delete :: Ord k => k -> Map k a -> Map k a
+delete :: HasCallStack => Ord k => k -> Map k a -> Map k a
 delete = go
   where
     go :: Ord k => k -> Map k a -> Map k a
@@ -1033,7 +1036,7 @@ delete = go
 -- > adjust ("new " ++) 7 (fromList [(5,"a"), (3,"b")]) == fromList [(3, "b"), (5, "a")]
 -- > adjust ("new " ++) 7 empty                         == empty
 
-adjust :: Ord k => (a -> a) -> k -> Map k a -> Map k a
+adjust :: HasCallStack => Ord k => (a -> a) -> k -> Map k a -> Map k a
 adjust f = adjustWithKey (\_ x -> f x)
 #if __GLASGOW_HASKELL__
 {-# INLINABLE adjust #-}
@@ -1049,7 +1052,7 @@ adjust f = adjustWithKey (\_ x -> f x)
 -- > adjustWithKey f 7 (fromList [(5,"a"), (3,"b")]) == fromList [(3, "b"), (5, "a")]
 -- > adjustWithKey f 7 empty                         == empty
 
-adjustWithKey :: Ord k => (k -> a -> a) -> k -> Map k a -> Map k a
+adjustWithKey :: HasCallStack => Ord k => (k -> a -> a) -> k -> Map k a -> Map k a
 adjustWithKey = go
   where
     go :: Ord k => (k -> a -> a) -> k -> Map k a -> Map k a
@@ -1074,7 +1077,7 @@ adjustWithKey = go
 -- > update f 7 (fromList [(5,"a"), (3,"b")]) == fromList [(3, "b"), (5, "a")]
 -- > update f 3 (fromList [(5,"a"), (3,"b")]) == singleton 5 "a"
 
-update :: Ord k => (a -> Maybe a) -> k -> Map k a -> Map k a
+update :: HasCallStack => Ord k => (a -> Maybe a) -> k -> Map k a -> Map k a
 update f = updateWithKey (\_ x -> f x)
 #if __GLASGOW_HASKELL__
 {-# INLINABLE update #-}
@@ -1093,7 +1096,7 @@ update f = updateWithKey (\_ x -> f x)
 -- > updateWithKey f 3 (fromList [(5,"a"), (3,"b")]) == singleton 5 "a"
 
 -- See Note: Type of local 'go' function
-updateWithKey :: Ord k => (k -> a -> Maybe a) -> k -> Map k a -> Map k a
+updateWithKey :: HasCallStack => Ord k => (k -> a -> Maybe a) -> k -> Map k a -> Map k a
 updateWithKey = go
   where
     go :: Ord k => (k -> a -> Maybe a) -> k -> Map k a -> Map k a
@@ -1121,7 +1124,7 @@ updateWithKey = go
 -- > updateLookupWithKey f 3 (fromList [(5,"a"), (3,"b")]) == (Just "b", singleton 5 "a")
 
 -- See Note: Type of local 'go' function
-updateLookupWithKey :: Ord k => (k -> a -> Maybe a) -> k -> Map k a -> (Maybe a,Map k a)
+updateLookupWithKey :: HasCallStack => Ord k => (k -> a -> Maybe a) -> k -> Map k a -> (Maybe a,Map k a)
 updateLookupWithKey f0 k0 = toPair . go f0 k0
  where
    go :: Ord k => (k -> a -> Maybe a) -> k -> Map k a -> StrictPair (Maybe a) (Map k a)
@@ -1159,7 +1162,7 @@ updateLookupWithKey f0 k0 = toPair . go f0 k0
 -- Note that @'adjust' = alter . fmap@.
 
 -- See Note: Type of local 'go' function
-alter :: Ord k => (Maybe a -> Maybe a) -> k -> Map k a -> Map k a
+alter :: HasCallStack => Ord k => (Maybe a -> Maybe a) -> k -> Map k a -> Map k a
 alter = go
   where
     go :: Ord k => (Maybe a -> Maybe a) -> k -> Map k a -> Map k a
@@ -1223,7 +1226,7 @@ data AreWeStrict = Strict | Lazy
 -- @Control.Lens.At@.
 --
 -- @since 0.5.8
-alterF :: (Functor f, Ord k)
+alterF :: HasCallStack => (Functor f, Ord k)
        => (Maybe a -> f (Maybe a)) -> k -> Map k a -> f (Map k a)
 alterF f k m = atKeyImpl Lazy k f m
 
@@ -1310,7 +1313,7 @@ lookupTrace = go emptyQB
 
 -- Insert at a location (which will always be a leaf)
 -- described by the path passed in.
-insertAlong :: BitQueue -> k -> a -> Map k a -> Map k a
+insertAlong :: HasCallStack => BitQueue -> k -> a -> Map k a -> Map k a
 insertAlong !_ kx x Tip = singleton kx x
 insertAlong q kx x (Bin sz ky y l r) =
   case unconsQ q of
@@ -1337,7 +1340,7 @@ insertAlong q kx x (Bin sz ky y l r) =
 -- the value itself through the recursion costs 3-4% time,
 -- so instead we convert the value to a magical zero-width
 -- proxy that's ultimately erased.
-deleteAlong :: any -> BitQueue -> Map k a -> Map k a
+deleteAlong :: HasCallStack => any -> BitQueue -> Map k a -> Map k a
 deleteAlong old !q0 !m = go (bogus old) q0 m where
 #ifdef USE_MAGIC_PROXY
   go :: Proxy# () -> BitQueue -> Map k a -> Map k a
@@ -1364,7 +1367,7 @@ bogus a = a
 
 -- Replace the value found in the node described
 -- by the given path with a new one.
-replaceAlong :: BitQueue -> a -> Map k a -> Map k a
+replaceAlong :: HasCallStack => BitQueue -> a -> Map k a -> Map k a
 replaceAlong !_ _ Tip = Tip -- Should not happen
 replaceAlong q  x (Bin sz ky y l r) =
       case unconsQ q of
@@ -1377,7 +1380,7 @@ atKeyIdentity :: Ord k => k -> (Maybe a -> Identity (Maybe a)) -> Map k a -> Ide
 atKeyIdentity k f t = Identity $ atKeyPlain Lazy k (coerce f) t
 {-# INLINABLE atKeyIdentity #-}
 
-atKeyPlain :: Ord k => AreWeStrict -> k -> (Maybe a -> Maybe a) -> Map k a -> Map k a
+atKeyPlain :: HasCallStack => Ord k => AreWeStrict -> k -> (Maybe a -> Maybe a) -> Map k a -> Map k a
 atKeyPlain strict k0 f0 t = case go k0 f0 t of
     AltSmaller t' -> t'
     AltBigger t' -> t'
@@ -1417,7 +1420,7 @@ data Altered k a = AltSmaller !(Map k a) | AltBigger !(Map k a) | AltAdj !(Map k
 -- this much slower version which uses a more "natural" implementation
 -- improved with Yoneda to avoid repeated fmaps. This works okayish for
 -- some operations, but it's pretty lousy for lookups.
-alterFFallback :: (Functor f, Ord k)
+alterFFallback :: HasCallStack => (Functor f, Ord k)
    => AreWeStrict -> k -> (Maybe a -> f (Maybe a)) -> Map k a -> f (Map k a)
 alterFFallback Lazy k f t = alterFYoneda k (\m q -> q <$> f m) t id
 alterFFallback Strict k f t = alterFYoneda k (\m q -> q . forceMaybe <$> f m) t id
@@ -1426,7 +1429,7 @@ alterFFallback Strict k f t = alterFYoneda k (\m q -> q . forceMaybe <$> f m) t 
     forceMaybe may@(Just !_) = may
 {-# NOINLINE alterFFallback #-}
 
-alterFYoneda :: Ord k =>
+alterFYoneda :: HasCallStack => Ord k =>
       k -> (Maybe a -> (Maybe a -> b) -> f b) -> Map k a -> (Map k a -> b) -> f b
 alterFYoneda = go
   where
@@ -1521,7 +1524,7 @@ elemAt i (Bin _ kx x l r)
 --
 -- @since 0.5.8
 
-take :: Int -> Map k a -> Map k a
+take :: HasCallStack => Int -> Map k a -> Map k a
 take i m | i >= size m = m
 take i0 m0 = go i0 m0
   where
@@ -1542,7 +1545,7 @@ take i0 m0 = go i0 m0
 -- @
 --
 -- @since 0.5.8
-drop :: Int -> Map k a -> Map k a
+drop :: HasCallStack => Int -> Map k a -> Map k a
 drop i m | i >= size m = Tip
 drop i0 m0 = go i0 m0
   where
@@ -1562,7 +1565,7 @@ drop i0 m0 = go i0 m0
 -- @
 --
 -- @since 0.5.8
-splitAt :: Int -> Map k a -> (Map k a, Map k a)
+splitAt :: HasCallStack => Int -> Map k a -> (Map k a, Map k a)
 splitAt i0 m0
   | i0 >= size m0 = (m0, Tip)
   | otherwise = toPair $ go i0 m0
@@ -1591,7 +1594,7 @@ splitAt i0 m0
 -- > updateAt (\_ _  -> Nothing)  2    (fromList [(5,"a"), (3,"b")])    Error: index out of range
 -- > updateAt (\_ _  -> Nothing)  (-1) (fromList [(5,"a"), (3,"b")])    Error: index out of range
 
-updateAt :: (k -> a -> Maybe a) -> Int -> Map k a -> Map k a
+updateAt :: HasCallStack => (k -> a -> Maybe a) -> Int -> Map k a -> Map k a
 updateAt f !i t =
   case t of
     Tip -> error "Map.updateAt: index out of range"
@@ -1613,7 +1616,7 @@ updateAt f !i t =
 -- > deleteAt 2 (fromList [(5,"a"), (3,"b")])     Error: index out of range
 -- > deleteAt (-1) (fromList [(5,"a"), (3,"b")])  Error: index out of range
 
-deleteAt :: Int -> Map k a -> Map k a
+deleteAt :: HasCallStack => Int -> Map k a -> Map k a
 deleteAt !i t =
   case t of
     Tip -> error "Map.deleteAt: index out of range"
@@ -1684,7 +1687,7 @@ findMax t
 -- > deleteMin (fromList [(5,"a"), (3,"b"), (7,"c")]) == fromList [(5,"a"), (7,"c")]
 -- > deleteMin empty == empty
 
-deleteMin :: Map k a -> Map k a
+deleteMin :: HasCallStack => Map k a -> Map k a
 deleteMin (Bin _ _  _ Tip r)  = r
 deleteMin (Bin _ kx x l r)    = balanceR kx x (deleteMin l) r
 deleteMin Tip                 = Tip
@@ -1694,7 +1697,7 @@ deleteMin Tip                 = Tip
 -- > deleteMax (fromList [(5,"a"), (3,"b"), (7,"c")]) == fromList [(3,"b"), (5,"a")]
 -- > deleteMax empty == empty
 
-deleteMax :: Map k a -> Map k a
+deleteMax :: HasCallStack => Map k a -> Map k a
 deleteMax (Bin _ _  _ l Tip)  = l
 deleteMax (Bin _ kx x l r)    = balanceL kx x l (deleteMax r)
 deleteMax Tip                 = Tip
@@ -1704,7 +1707,7 @@ deleteMax Tip                 = Tip
 -- > updateMin (\ a -> Just ("X" ++ a)) (fromList [(5,"a"), (3,"b")]) == fromList [(3, "Xb"), (5, "a")]
 -- > updateMin (\ _ -> Nothing)         (fromList [(5,"a"), (3,"b")]) == singleton 5 "a"
 
-updateMin :: (a -> Maybe a) -> Map k a -> Map k a
+updateMin :: HasCallStack => (a -> Maybe a) -> Map k a -> Map k a
 updateMin f m
   = updateMinWithKey (\_ x -> f x) m
 
@@ -1713,7 +1716,7 @@ updateMin f m
 -- > updateMax (\ a -> Just ("X" ++ a)) (fromList [(5,"a"), (3,"b")]) == fromList [(3, "b"), (5, "Xa")]
 -- > updateMax (\ _ -> Nothing)         (fromList [(5,"a"), (3,"b")]) == singleton 3 "b"
 
-updateMax :: (a -> Maybe a) -> Map k a -> Map k a
+updateMax :: HasCallStack => (a -> Maybe a) -> Map k a -> Map k a
 updateMax f m
   = updateMaxWithKey (\_ x -> f x) m
 
@@ -1723,7 +1726,7 @@ updateMax f m
 -- > updateMinWithKey (\ k a -> Just ((show k) ++ ":" ++ a)) (fromList [(5,"a"), (3,"b")]) == fromList [(3,"3:b"), (5,"a")]
 -- > updateMinWithKey (\ _ _ -> Nothing)                     (fromList [(5,"a"), (3,"b")]) == singleton 5 "a"
 
-updateMinWithKey :: (k -> a -> Maybe a) -> Map k a -> Map k a
+updateMinWithKey :: HasCallStack => (k -> a -> Maybe a) -> Map k a -> Map k a
 updateMinWithKey _ Tip                 = Tip
 updateMinWithKey f (Bin sx kx x Tip r) = case f kx x of
                                            Nothing -> r
@@ -1735,7 +1738,7 @@ updateMinWithKey f (Bin _ kx x l r)    = balanceR kx x (updateMinWithKey f l) r
 -- > updateMaxWithKey (\ k a -> Just ((show k) ++ ":" ++ a)) (fromList [(5,"a"), (3,"b")]) == fromList [(3,"b"), (5,"5:a")]
 -- > updateMaxWithKey (\ _ _ -> Nothing)                     (fromList [(5,"a"), (3,"b")]) == singleton 3 "b"
 
-updateMaxWithKey :: (k -> a -> Maybe a) -> Map k a -> Map k a
+updateMaxWithKey :: HasCallStack => (k -> a -> Maybe a) -> Map k a -> Map k a
 updateMaxWithKey _ Tip                 = Tip
 updateMaxWithKey f (Bin sx kx x l Tip) = case f kx x of
                                            Nothing -> l
@@ -1807,7 +1810,7 @@ maxView t = case maxViewWithKey t of
 -- > unions [(fromList [(5, "A3"), (3, "B3")]), (fromList [(5, "A"), (7, "C")]), (fromList [(5, "a"), (3, "b")])]
 -- >     == fromList [(3, "B3"), (5, "A3"), (7, "C")]
 
-unions :: (Foldable f, Ord k) => f (Map k a) -> Map k a
+unions :: HasCallStack => (Foldable f, Ord k) => f (Map k a) -> Map k a
 unions ts
   = Foldable.foldl' union empty ts
 #if __GLASGOW_HASKELL__
@@ -1820,7 +1823,7 @@ unions ts
 -- > unionsWith (++) [(fromList [(5, "a"), (3, "b")]), (fromList [(5, "A"), (7, "C")]), (fromList [(5, "A3"), (3, "B3")])]
 -- >     == fromList [(3, "bB3"), (5, "aAA3"), (7, "C")]
 
-unionsWith :: (Foldable f, Ord k) => (a->a->a) -> f (Map k a) -> Map k a
+unionsWith :: HasCallStack => (Foldable f, Ord k) => (a->a->a) -> f (Map k a) -> Map k a
 unionsWith f ts
   = Foldable.foldl' (unionWith f) empty ts
 #if __GLASGOW_HASKELL__
@@ -1834,7 +1837,7 @@ unionsWith f ts
 --
 -- > union (fromList [(5, "a"), (3, "b")]) (fromList [(5, "A"), (7, "C")]) == fromList [(3, "b"), (5, "a"), (7, "C")]
 
-union :: Ord k => Map k a -> Map k a -> Map k a
+union :: HasCallStack => Ord k => Map k a -> Map k a -> Map k a
 union t1 Tip  = t1
 union t1 (Bin _ k x Tip Tip) = insertR k x t1
 union (Bin _ k x Tip Tip) t2 = insert k x t2
@@ -1855,7 +1858,7 @@ union t1@(Bin _ k1 x1 l1 r1) t2 = case split k1 t2 of
 --
 -- > unionWith (++) (fromList [(5, "a"), (3, "b")]) (fromList [(5, "A"), (7, "C")]) == fromList [(3, "b"), (5, "aA"), (7, "C")]
 
-unionWith :: Ord k => (a -> a -> a) -> Map k a -> Map k a -> Map k a
+unionWith :: HasCallStack => Ord k => (a -> a -> a) -> Map k a -> Map k a -> Map k a
 -- QuickCheck says pointer equality never happens here.
 unionWith _f t1 Tip = t1
 unionWith f t1 (Bin _ k x Tip Tip) = insertWithR f k x t1
@@ -1877,7 +1880,7 @@ unionWith f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
 -- > let f key left_value right_value = (show key) ++ ":" ++ left_value ++ "|" ++ right_value
 -- > unionWithKey f (fromList [(5, "a"), (3, "b")]) (fromList [(5, "A"), (7, "C")]) == fromList [(3, "b"), (5, "5:a|A"), (7, "C")]
 
-unionWithKey :: Ord k => (k -> a -> a -> a) -> Map k a -> Map k a -> Map k a
+unionWithKey :: HasCallStack => Ord k => (k -> a -> a -> a) -> Map k a -> Map k a -> Map k a
 unionWithKey _f t1 Tip = t1
 unionWithKey f t1 (Bin _ k x Tip Tip) = insertWithKeyR f k x t1
 unionWithKey f (Bin _ k x Tip Tip) t2 = insertWithKey f k x t2
@@ -1907,7 +1910,7 @@ unionWithKey f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
 --
 -- > difference (fromList [(5, "a"), (3, "b")]) (fromList [(5, "A"), (7, "C")]) == singleton 3 "b"
 
-difference :: Ord k => Map k a -> Map k b -> Map k a
+difference :: HasCallStack => Ord k => Map k a -> Map k b -> Map k a
 difference Tip _   = Tip
 difference t1 Tip  = t1
 difference t1 (Bin _ k _ l2 r2) = case split k t1 of
@@ -1930,7 +1933,7 @@ difference t1 (Bin _ k _ l2 r2) = case split k t1 of
 --
 -- @since 0.5.8
 
-withoutKeys :: Ord k => Map k a -> Set k -> Map k a
+withoutKeys :: HasCallStack => Ord k => Map k a -> Set k -> Map k a
 withoutKeys Tip _ = Tip
 withoutKeys m Set.Tip = m
 withoutKeys m (Set.Bin _ k ls rs) = case splitMember k m of
@@ -1953,7 +1956,7 @@ withoutKeys m (Set.Bin _ k ls rs) = case splitMember k m of
 -- > let f al ar = if al == "b" then Just (al ++ ":" ++ ar) else Nothing
 -- > differenceWith f (fromList [(5, "a"), (3, "b")]) (fromList [(5, "A"), (3, "B"), (7, "C")])
 -- >     == singleton 3 "b:B"
-differenceWith :: Ord k => (a -> b -> Maybe a) -> Map k a -> Map k b -> Map k a
+differenceWith :: HasCallStack => Ord k => (a -> b -> Maybe a) -> Map k a -> Map k b -> Map k a
 differenceWith f = merge preserveMissing dropMissing $
        zipWithMaybeMatched (\_ x y -> f x y)
 #if __GLASGOW_HASKELL__
@@ -1969,7 +1972,7 @@ differenceWith f = merge preserveMissing dropMissing $
 -- > differenceWithKey f (fromList [(5, "a"), (3, "b")]) (fromList [(5, "A"), (3, "B"), (10, "C")])
 -- >     == singleton 3 "3:b|B"
 
-differenceWithKey :: Ord k => (k -> a -> b -> Maybe a) -> Map k a -> Map k b -> Map k a
+differenceWithKey :: HasCallStack => Ord k => (k -> a -> b -> Maybe a) -> Map k a -> Map k b -> Map k a
 differenceWithKey f =
   merge preserveMissing dropMissing (zipWithMaybeMatched f)
 #if __GLASGOW_HASKELL__
@@ -1986,7 +1989,7 @@ differenceWithKey f =
 --
 -- > intersection (fromList [(5, "a"), (3, "b")]) (fromList [(5, "A"), (7, "C")]) == singleton 5 "a"
 
-intersection :: Ord k => Map k a -> Map k b -> Map k a
+intersection :: HasCallStack => Ord k => Map k a -> Map k b -> Map k a
 intersection Tip _ = Tip
 intersection _ Tip = Tip
 intersection t1@(Bin _ k x l1 r1) t2
@@ -2011,7 +2014,7 @@ intersection t1@(Bin _ k x l1 r1) t2
 -- @
 --
 -- @since 0.5.8
-restrictKeys :: Ord k => Map k a -> Set k -> Map k a
+restrictKeys :: HasCallStack => Ord k => Map k a -> Set k -> Map k a
 restrictKeys Tip _ = Tip
 restrictKeys _ Set.Tip = Tip
 restrictKeys m@(Bin _ k x l1 r1) s
@@ -2031,7 +2034,7 @@ restrictKeys m@(Bin _ k x l1 r1) s
 --
 -- > intersectionWith (++) (fromList [(5, "a"), (3, "b")]) (fromList [(5, "A"), (7, "C")]) == singleton 5 "aA"
 
-intersectionWith :: Ord k => (a -> b -> c) -> Map k a -> Map k b -> Map k c
+intersectionWith :: HasCallStack => Ord k => (a -> b -> c) -> Map k a -> Map k b -> Map k c
 -- We have no hope of pointer equality tricks here because every single
 -- element in the result will be a thunk.
 intersectionWith _f Tip _ = Tip
@@ -2052,7 +2055,7 @@ intersectionWith f (Bin _ k x1 l1 r1) t2 = case mb of
 -- > let f k al ar = (show k) ++ ":" ++ al ++ "|" ++ ar
 -- > intersectionWithKey f (fromList [(5, "a"), (3, "b")]) (fromList [(5, "A"), (7, "C")]) == singleton 5 "5:a|A"
 
-intersectionWithKey :: Ord k => (k -> a -> b -> c) -> Map k a -> Map k b -> Map k c
+intersectionWithKey :: HasCallStack => Ord k => (k -> a -> b -> c) -> Map k a -> Map k b -> Map k c
 intersectionWithKey _f Tip _ = Tip
 intersectionWithKey _f _ Tip = Tip
 intersectionWithKey f (Bin _ k x1 l1 r1) t2 = case mb of
@@ -2113,7 +2116,7 @@ disjoint (Bin _ k _ l r) t
 -- force these values.
 --
 -- @since 0.6.3.1
-compose :: Ord b => Map b c -> Map a b -> Map a c
+compose :: HasCallStack => Ord b => Map b c -> Map a b -> Map a c
 compose bc !ab
   | null bc = empty
   | otherwise = mapMaybe (bc !?) ab
@@ -2629,7 +2632,7 @@ traverseMaybeMissing f = WhenMissing
 -- prop> mapEachPiece f g h = merge (mapMissing f) (mapMissing g) (zipWithMatched h)
 --
 -- @since 0.5.9
-merge :: Ord k
+merge :: HasCallStack => Ord k
              => SimpleWhenMissing k a c -- ^ What to do with keys in @m1@ but not @m2@
              -> SimpleWhenMissing k b c -- ^ What to do with keys in @m2@ but not @m1@
              -> SimpleWhenMatched k a b c -- ^ What to do with keys in both @m1@ and @m2@
@@ -2704,7 +2707,7 @@ merge g1 g2 f m1 m2 = runIdentity $
 --
 -- @since 0.5.9
 mergeA
-  :: (Applicative f, Ord k)
+  :: HasCallStack => (Applicative f, Ord k)
   => WhenMissing f k a c -- ^ What to do with keys in @m1@ but not @m2@
   -> WhenMissing f k b c -- ^ What to do with keys in @m2@ but not @m1@
   -> WhenMatched f k a b c -- ^ What to do with keys in both @m1@ and @m2@
@@ -2767,12 +2770,12 @@ mergeA
 -- @only2@ are 'id' and @'const' 'empty'@, but for example @'map' f@,
 -- @'filterWithKey' f@, or @'mapMaybeWithKey' f@ could be used for any @f@.
 
-mergeWithKey :: Ord k
+mergeWithKey :: HasCallStack => Ord k
              => (k -> a -> b -> Maybe c)
              -> (Map k a -> Map k c)
              -> (Map k b -> Map k c)
              -> Map k a -> Map k b -> Map k c
-mergeWithKey f g1 g2 = go
+mergeWithKey f g1 g2 = \m1 m2 -> assertValid $ go m1 m2
   where
     go Tip t2 = g2 t2
     go t1 Tip = g1 t1
@@ -2895,7 +2898,7 @@ isProperSubmapOfBy f t1 t2
 -- > filter (> "x") (fromList [(5,"a"), (3,"b")]) == empty
 -- > filter (< "a") (fromList [(5,"a"), (3,"b")]) == empty
 
-filter :: (a -> Bool) -> Map k a -> Map k a
+filter :: HasCallStack => (a -> Bool) -> Map k a -> Map k a
 filter p m
   = filterWithKey (\_ x -> p x) m
 
@@ -2903,7 +2906,7 @@ filter p m
 --
 -- > filterWithKey (\k _ -> k > 4) (fromList [(5,"a"), (3,"b")]) == singleton 5 "a"
 
-filterWithKey :: (k -> a -> Bool) -> Map k a -> Map k a
+filterWithKey :: HasCallStack => (k -> a -> Bool) -> Map k a -> Map k a
 filterWithKey _ Tip = Tip
 filterWithKey p t@(Bin _ kx x l r)
   | p kx x    = if pl `ptrEq` l && pr `ptrEq` r
@@ -2915,7 +2918,7 @@ filterWithKey p t@(Bin _ kx x l r)
 
 -- | /O(n)/. Filter keys and values using an 'Applicative'
 -- predicate.
-filterWithKeyA :: Applicative f => (k -> a -> f Bool) -> Map k a -> f (Map k a)
+filterWithKeyA :: HasCallStack => Applicative f => (k -> a -> f Bool) -> Map k a -> f (Map k a)
 filterWithKeyA _ Tip = pure Tip
 filterWithKeyA p t@(Bin _ kx x l r) =
   liftA3 combine (p kx x) (filterWithKeyA p l) (filterWithKeyA p r)
@@ -2936,7 +2939,7 @@ filterWithKeyA p t@(Bin _ kx x l r) =
 --
 -- @since 0.5.8
 
-takeWhileAntitone :: (k -> Bool) -> Map k a -> Map k a
+takeWhileAntitone :: HasCallStack => (k -> Bool) -> Map k a -> Map k a
 takeWhileAntitone _ Tip = Tip
 takeWhileAntitone p (Bin _ kx x l r)
   | p kx = link kx x l (takeWhileAntitone p r)
@@ -2953,7 +2956,7 @@ takeWhileAntitone p (Bin _ kx x l r)
 --
 -- @since 0.5.8
 
-dropWhileAntitone :: (k -> Bool) -> Map k a -> Map k a
+dropWhileAntitone :: HasCallStack => (k -> Bool) -> Map k a -> Map k a
 dropWhileAntitone _ Tip = Tip
 dropWhileAntitone p (Bin _ kx x l r)
   | p kx = dropWhileAntitone p r
@@ -2975,7 +2978,7 @@ dropWhileAntitone p (Bin _ kx x l r)
 --
 -- @since 0.5.8
 
-spanAntitone :: (k -> Bool) -> Map k a -> (Map k a, Map k a)
+spanAntitone :: HasCallStack => (k -> Bool) -> Map k a -> (Map k a, Map k a)
 spanAntitone p0 m = toPair (go p0 m)
   where
     go _ Tip = Tip :*: Tip
@@ -2991,7 +2994,7 @@ spanAntitone p0 m = toPair (go p0 m)
 -- > partition (< "x") (fromList [(5,"a"), (3,"b")]) == (fromList [(3, "b"), (5, "a")], empty)
 -- > partition (> "x") (fromList [(5,"a"), (3,"b")]) == (empty, fromList [(3, "b"), (5, "a")])
 
-partition :: (a -> Bool) -> Map k a -> (Map k a,Map k a)
+partition :: HasCallStack => (a -> Bool) -> Map k a -> (Map k a,Map k a)
 partition p m
   = partitionWithKey (\_ x -> p x) m
 
@@ -3003,7 +3006,7 @@ partition p m
 -- > partitionWithKey (\ k _ -> k < 7) (fromList [(5,"a"), (3,"b")]) == (fromList [(3, "b"), (5, "a")], empty)
 -- > partitionWithKey (\ k _ -> k > 7) (fromList [(5,"a"), (3,"b")]) == (empty, fromList [(3, "b"), (5, "a")])
 
-partitionWithKey :: (k -> a -> Bool) -> Map k a -> (Map k a,Map k a)
+partitionWithKey :: HasCallStack => (k -> a -> Bool) -> Map k a -> (Map k a,Map k a)
 partitionWithKey p0 t0 = toPair $ go p0 t0
   where
     go _ Tip = (Tip :*: Tip)
@@ -3024,7 +3027,7 @@ partitionWithKey p0 t0 = toPair $ go p0 t0
 -- > let f x = if x == "a" then Just "new a" else Nothing
 -- > mapMaybe f (fromList [(5,"a"), (3,"b")]) == singleton 5 "new a"
 
-mapMaybe :: (a -> Maybe b) -> Map k a -> Map k b
+mapMaybe :: HasCallStack => (a -> Maybe b) -> Map k a -> Map k b
 mapMaybe f = mapMaybeWithKey (\_ x -> f x)
 
 -- | /O(n)/. Map keys\/values and collect the 'Just' results.
@@ -3032,7 +3035,7 @@ mapMaybe f = mapMaybeWithKey (\_ x -> f x)
 -- > let f k _ = if k < 5 then Just ("key : " ++ (show k)) else Nothing
 -- > mapMaybeWithKey f (fromList [(5,"a"), (3,"b")]) == singleton 3 "key : 3"
 
-mapMaybeWithKey :: (k -> a -> Maybe b) -> Map k a -> Map k b
+mapMaybeWithKey :: HasCallStack => (k -> a -> Maybe b) -> Map k a -> Map k b
 mapMaybeWithKey _ Tip = Tip
 mapMaybeWithKey f (Bin _ kx x l r) = case f kx x of
   Just y  -> link kx y (mapMaybeWithKey f l) (mapMaybeWithKey f r)
@@ -3041,7 +3044,7 @@ mapMaybeWithKey f (Bin _ kx x l r) = case f kx x of
 -- | /O(n)/. Traverse keys\/values and collect the 'Just' results.
 --
 -- @since 0.5.8
-traverseMaybeWithKey :: Applicative f
+traverseMaybeWithKey :: HasCallStack => Applicative f
                      => (k -> a -> f (Maybe b)) -> Map k a -> f (Map k b)
 traverseMaybeWithKey = go
   where
@@ -3062,7 +3065,7 @@ traverseMaybeWithKey = go
 -- > mapEither (\ a -> Right a) (fromList [(5,"a"), (3,"b"), (1,"x"), (7,"z")])
 -- >     == (empty, fromList [(5,"a"), (3,"b"), (1,"x"), (7,"z")])
 
-mapEither :: (a -> Either b c) -> Map k a -> (Map k b, Map k c)
+mapEither :: HasCallStack => (a -> Either b c) -> Map k a -> (Map k b, Map k c)
 mapEither f m
   = mapEitherWithKey (\_ x -> f x) m
 
@@ -3075,7 +3078,7 @@ mapEither f m
 -- > mapEitherWithKey (\_ a -> Right a) (fromList [(5,"a"), (3,"b"), (1,"x"), (7,"z")])
 -- >     == (empty, fromList [(1,"x"), (3,"b"), (5,"a"), (7,"z")])
 
-mapEitherWithKey :: (k -> a -> Either b c) -> Map k a -> (Map k b, Map k c)
+mapEitherWithKey :: HasCallStack => (k -> a -> Either b c) -> Map k a -> (Map k b, Map k c)
 mapEitherWithKey f0 t0 = toPair $ go f0 t0
   where
     go _ Tip = (Tip :*: Tip)
@@ -3093,7 +3096,7 @@ mapEitherWithKey f0 t0 = toPair $ go f0 t0
 --
 -- > map (++ "x") (fromList [(5,"a"), (3,"b")]) == fromList [(3, "bx"), (5, "ax")]
 
-map :: (a -> b) -> Map k a -> Map k b
+map :: HasCallStack => (a -> b) -> Map k a -> Map k b
 map f = go where
   go Tip = Tip
   go (Bin sx kx x l r) = Bin sx kx (f x) (go l) (go r)
@@ -3119,7 +3122,7 @@ map f = go where
 -- > let f key x = (show key) ++ ":" ++ x
 -- > mapWithKey f (fromList [(5,"a"), (3,"b")]) == fromList [(3, "3:b"), (5, "5:a")]
 
-mapWithKey :: (k -> a -> b) -> Map k a -> Map k b
+mapWithKey :: HasCallStack => (k -> a -> b) -> Map k a -> Map k b
 mapWithKey _ Tip = Tip
 mapWithKey f (Bin sx kx x l r) = Bin sx kx (f kx x) (mapWithKey f l) (mapWithKey f r)
 
@@ -3142,7 +3145,7 @@ mapWithKey f (Bin sx kx x l r) = Bin sx kx (f kx x) (mapWithKey f l) (mapWithKey
 --
 -- > traverseWithKey (\k v -> if odd k then Just (succ v) else Nothing) (fromList [(1, 'a'), (5, 'e')]) == Just (fromList [(1, 'b'), (5, 'f')])
 -- > traverseWithKey (\k v -> if odd k then Just (succ v) else Nothing) (fromList [(2, 'c')])           == Nothing
-traverseWithKey :: Applicative t => (k -> a -> t b) -> Map k a -> t (Map k b)
+traverseWithKey :: HasCallStack => Applicative t => (k -> a -> t b) -> Map k a -> t (Map k b)
 traverseWithKey f = go
   where
     go Tip = pure Tip
@@ -3156,7 +3159,7 @@ traverseWithKey f = go
 -- > let f a b = (a ++ b, b ++ "X")
 -- > mapAccum f "Everything: " (fromList [(5,"a"), (3,"b")]) == ("Everything: ba", fromList [(3, "bX"), (5, "aX")])
 
-mapAccum :: (a -> b -> (a,c)) -> a -> Map k b -> (a,Map k c)
+mapAccum :: HasCallStack => (a -> b -> (a,c)) -> a -> Map k b -> (a,Map k c)
 mapAccum f a m
   = mapAccumWithKey (\a' _ x' -> f a' x') a m
 
@@ -3166,13 +3169,13 @@ mapAccum f a m
 -- > let f a k b = (a ++ " " ++ (show k) ++ "-" ++ b, b ++ "X")
 -- > mapAccumWithKey f "Everything:" (fromList [(5,"a"), (3,"b")]) == ("Everything: 3-b 5-a", fromList [(3, "bX"), (5, "aX")])
 
-mapAccumWithKey :: (a -> k -> b -> (a,c)) -> a -> Map k b -> (a,Map k c)
+mapAccumWithKey :: HasCallStack => (a -> k -> b -> (a,c)) -> a -> Map k b -> (a,Map k c)
 mapAccumWithKey f a t
   = mapAccumL f a t
 
 -- | /O(n)/. The function 'mapAccumL' threads an accumulating
 -- argument through the map in ascending order of keys.
-mapAccumL :: (a -> k -> b -> (a,c)) -> a -> Map k b -> (a,Map k c)
+mapAccumL :: HasCallStack => (a -> k -> b -> (a,c)) -> a -> Map k b -> (a,Map k c)
 mapAccumL _ a Tip               = (a,Tip)
 mapAccumL f a (Bin sx kx x l r) =
   let (a1,l') = mapAccumL f a l
@@ -3182,7 +3185,7 @@ mapAccumL f a (Bin sx kx x l r) =
 
 -- | /O(n)/. The function 'mapAccumRWithKey' threads an accumulating
 -- argument through the map in descending order of keys.
-mapAccumRWithKey :: (a -> k -> b -> (a,c)) -> a -> Map k b -> (a,Map k c)
+mapAccumRWithKey :: HasCallStack => (a -> k -> b -> (a,c)) -> a -> Map k b -> (a,Map k c)
 mapAccumRWithKey _ a Tip = (a,Tip)
 mapAccumRWithKey f a (Bin sx kx x l r) =
   let (a1,r') = mapAccumRWithKey f a r
@@ -3201,7 +3204,7 @@ mapAccumRWithKey f a (Bin sx kx x l r) =
 -- > mapKeys (\ _ -> 1) (fromList [(1,"b"), (2,"a"), (3,"d"), (4,"c")]) == singleton 1 "c"
 -- > mapKeys (\ _ -> 3) (fromList [(1,"b"), (2,"a"), (3,"d"), (4,"c")]) == singleton 3 "c"
 
-mapKeys :: Ord k2 => (k1->k2) -> Map k1 a -> Map k2 a
+mapKeys :: HasCallStack => Ord k2 => (k1->k2) -> Map k1 a -> Map k2 a
 mapKeys f = fromList . foldrWithKey (\k x xs -> (f k, x) : xs) []
 #if __GLASGOW_HASKELL__
 {-# INLINABLE mapKeys #-}
@@ -3218,7 +3221,7 @@ mapKeys f = fromList . foldrWithKey (\k x xs -> (f k, x) : xs) []
 -- > mapKeysWith (++) (\ _ -> 1) (fromList [(1,"b"), (2,"a"), (3,"d"), (4,"c")]) == singleton 1 "cdab"
 -- > mapKeysWith (++) (\ _ -> 3) (fromList [(1,"b"), (2,"a"), (3,"d"), (4,"c")]) == singleton 3 "cdab"
 
-mapKeysWith :: Ord k2 => (a -> a -> a) -> (k1->k2) -> Map k1 a -> Map k2 a
+mapKeysWith :: HasCallStack => Ord k2 => (a -> a -> a) -> (k1->k2) -> Map k1 a -> Map k2 a
 mapKeysWith c f = fromListWith c . foldrWithKey (\k x xs -> (f k, x) : xs) []
 #if __GLASGOW_HASKELL__
 {-# INLINABLE mapKeysWith #-}
@@ -3243,10 +3246,11 @@ mapKeysWith c f = fromListWith c . foldrWithKey (\k x xs -> (f k, x) : xs) []
 -- > valid (mapKeysMonotonic (\ k -> k * 2) (fromList [(5,"a"), (3,"b")])) == True
 -- > valid (mapKeysMonotonic (\ _ -> 1)     (fromList [(5,"a"), (3,"b")])) == False
 
-mapKeysMonotonic :: (k1->k2) -> Map k1 a -> Map k2 a
-mapKeysMonotonic _ Tip = Tip
-mapKeysMonotonic f (Bin sz k x l r) =
-    Bin sz (f k) x (mapKeysMonotonic f l) (mapKeysMonotonic f r)
+mapKeysMonotonic :: HasCallStack => Ord k2 => (k1->k2) -> Map k1 a -> Map k2 a
+mapKeysMonotonic f = assertValid . go where
+    go Tip = Tip
+    go (Bin sz k x l r) =
+        Bin sz (f k) x (go l) (go r)
 
 {--------------------------------------------------------------------
   Folds
@@ -3424,7 +3428,7 @@ keysSet (Bin sz kx _ l r) = Set.Bin sz kx (keysSet l) (keysSet r)
 -- > fromSet (\k -> replicate k 'a') (Data.Set.fromList [3, 5]) == fromList [(5,"aaaaa"), (3,"aaa")]
 -- > fromSet undefined Data.Set.empty == empty
 
-fromSet :: (k -> a) -> Set.Set k -> Map k a
+fromSet :: HasCallStack => (k -> a) -> Set.Set k -> Map k a
 fromSet _ Set.Tip = Tip
 fromSet f (Set.Bin sz x l r) = Bin sz x (f x) (fromSet f l) (fromSet f r)
 
@@ -3452,7 +3456,7 @@ instance (Ord k) => GHCExts.IsList (Map k v) where
 
 -- For some reason, when 'singleton' is used in fromList or in
 -- create, it is not inlined, so we inline it manually.
-fromList :: Ord k => [(k,a)] -> Map k a
+fromList :: HasCallStack => Ord k => [(k,a)] -> Map k a
 fromList [] = Tip
 fromList [(kx, x)] = Bin 1 kx x Tip Tip
 fromList ((kx0, x0) : xs0) | not_ordered kx0 xs0 = fromList' (Bin 1 kx0 x0 Tip Tip) xs0
@@ -3496,7 +3500,7 @@ fromList ((kx0, x0) : xs0) | not_ordered kx0 xs0 = fromList' (Bin 1 kx0 x0 Tip T
 -- > fromListWith (++) [(5,"a"), (5,"b"), (3,"b"), (3,"a"), (5,"a")] == fromList [(3, "ab"), (5, "aba")]
 -- > fromListWith (++) [] == empty
 
-fromListWith :: Ord k => (a -> a -> a) -> [(k,a)] -> Map k a
+fromListWith :: HasCallStack => Ord k => (a -> a -> a) -> [(k,a)] -> Map k a
 fromListWith f xs
   = fromListWithKey (\_ x y -> f x y) xs
 #if __GLASGOW_HASKELL__
@@ -3509,7 +3513,7 @@ fromListWith f xs
 -- > fromListWithKey f [(5,"a"), (5,"b"), (3,"b"), (3,"a"), (5,"a")] == fromList [(3, "3ab"), (5, "5a5ba")]
 -- > fromListWithKey f [] == empty
 
-fromListWithKey :: Ord k => (k -> a -> a -> a) -> [(k,a)] -> Map k a
+fromListWithKey :: HasCallStack => Ord k => (k -> a -> a -> a) -> [(k,a)] -> Map k a
 fromListWithKey f xs
   = Foldable.foldl' ins empty xs
   where
@@ -3592,7 +3596,7 @@ foldlFB = foldlWithKey
 -- > valid (fromAscList [(3,"b"), (5,"a"), (5,"b")]) == True
 -- > valid (fromAscList [(5,"a"), (3,"b"), (5,"b")]) == False
 
-fromAscList :: Eq k => [(k,a)] -> Map k a
+fromAscList :: HasCallStack => Ord k => [(k,a)] -> Map k a
 fromAscList xs
   = fromDistinctAscList (combineEq xs)
   where
@@ -3621,7 +3625,7 @@ fromAscList xs
 --
 -- @since 0.5.8
 
-fromDescList :: Eq k => [(k,a)] -> Map k a
+fromDescList :: HasCallStack => Ord k => [(k,a)] -> Map k a
 fromDescList xs = fromDistinctDescList (combineEq xs)
   where
   -- [combineEq f xs] combines equal elements with function [f] in an ordered list [xs]
@@ -3646,7 +3650,7 @@ fromDescList xs = fromDistinctDescList (combineEq xs)
 -- > valid (fromAscListWith (++) [(3,"b"), (5,"a"), (5,"b")]) == True
 -- > valid (fromAscListWith (++) [(5,"a"), (3,"b"), (5,"b")]) == False
 
-fromAscListWith :: Eq k => (a -> a -> a) -> [(k,a)] -> Map k a
+fromAscListWith :: HasCallStack => Ord k => (a -> a -> a) -> [(k,a)] -> Map k a
 fromAscListWith f xs
   = fromAscListWithKey (\_ x y -> f x y) xs
 #if __GLASGOW_HASKELL__
@@ -3662,7 +3666,7 @@ fromAscListWith f xs
 --
 -- @since 0.5.8
 
-fromDescListWith :: Eq k => (a -> a -> a) -> [(k,a)] -> Map k a
+fromDescListWith :: HasCallStack => Ord k => (a -> a -> a) -> [(k,a)] -> Map k a
 fromDescListWith f xs
   = fromDescListWithKey (\_ x y -> f x y) xs
 #if __GLASGOW_HASKELL__
@@ -3678,7 +3682,7 @@ fromDescListWith f xs
 -- > valid (fromAscListWithKey f [(3,"b"), (5,"a"), (5,"b"), (5,"b")]) == True
 -- > valid (fromAscListWithKey f [(5,"a"), (3,"b"), (5,"b"), (5,"b")]) == False
 
-fromAscListWithKey :: Eq k => (k -> a -> a -> a) -> [(k,a)] -> Map k a
+fromAscListWithKey :: HasCallStack => Ord k => (k -> a -> a -> a) -> [(k,a)] -> Map k a
 fromAscListWithKey f xs
   = fromDistinctAscList (combineEq f xs)
   where
@@ -3705,7 +3709,7 @@ fromAscListWithKey f xs
 -- > fromDescListWithKey f [(5,"a"), (5,"b"), (5,"b"), (3,"b")] == fromList [(3, "b"), (5, "5:b5:ba")]
 -- > valid (fromDescListWithKey f [(5,"a"), (5,"b"), (5,"b"), (3,"b")]) == True
 -- > valid (fromDescListWithKey f [(5,"a"), (3,"b"), (5,"b"), (5,"b")]) == False
-fromDescListWithKey :: Eq k => (k -> a -> a -> a) -> [(k,a)] -> Map k a
+fromDescListWithKey :: HasCallStack => Ord k => (k -> a -> a -> a) -> [(k,a)] -> Map k a
 fromDescListWithKey f xs
   = fromDistinctDescList (combineEq f xs)
   where
@@ -3734,9 +3738,10 @@ fromDescListWithKey f xs
 
 -- For some reason, when 'singleton' is used in fromDistinctAscList or in
 -- create, it is not inlined, so we inline it manually.
-fromDistinctAscList :: [(k,a)] -> Map k a
-fromDistinctAscList [] = Tip
-fromDistinctAscList ((kx0, x0) : xs0) = go (1::Int) (Bin 1 kx0 x0 Tip Tip) xs0
+fromDistinctAscList :: HasCallStack =>Ord k =>  [(k,a)] -> Map k a
+fromDistinctAscList = assertValid . go0 where
+ go0 [] = Tip
+ go0 ((kx0, x0) : xs0) = go (1::Int) (Bin 1 kx0 x0 Tip Tip) xs0
   where
     go !_ t [] = t
     go s l ((kx, x) : xs) = case create s xs of
@@ -3762,9 +3767,10 @@ fromDistinctAscList ((kx0, x0) : xs0) = go (1::Int) (Bin 1 kx0 x0 Tip Tip) xs0
 
 -- For some reason, when 'singleton' is used in fromDistinctDescList or in
 -- create, it is not inlined, so we inline it manually.
-fromDistinctDescList :: [(k,a)] -> Map k a
-fromDistinctDescList [] = Tip
-fromDistinctDescList ((kx0, x0) : xs0) = go (1 :: Int) (Bin 1 kx0 x0 Tip Tip) xs0
+fromDistinctDescList :: HasCallStack => Ord k => [(k,a)] -> Map k a
+fromDistinctDescList = assertValid . go0 where
+ go0 [] = Tip
+ go0 ((kx0, x0) : xs0) = go (1 :: Int) (Bin 1 kx0 x0 Tip Tip) xs0
   where
      go !_ t [] = t
      go s r ((kx, x) : xs) = case create s xs of
@@ -3824,7 +3830,7 @@ filterLt !b (Bin _ kx x l r) =
 -- > split 5 (fromList [(5,"a"), (3,"b")]) == (singleton 3 "b", empty)
 -- > split 6 (fromList [(5,"a"), (3,"b")]) == (fromList [(3,"b"), (5,"a")], empty)
 
-split :: Ord k => k -> Map k a -> (Map k a,Map k a)
+split :: HasCallStack => Ord k => k -> Map k a -> (Map k a,Map k a)
 split !k0 t0 = toPair $ go k0 t0
   where
     go k t =
@@ -3846,7 +3852,7 @@ split !k0 t0 = toPair $ go k0 t0
 -- > splitLookup 4 (fromList [(5,"a"), (3,"b")]) == (singleton 3 "b", Nothing, singleton 5 "a")
 -- > splitLookup 5 (fromList [(5,"a"), (3,"b")]) == (singleton 3 "b", Just "a", empty)
 -- > splitLookup 6 (fromList [(5,"a"), (3,"b")]) == (fromList [(3,"b"), (5,"a")], Nothing, empty)
-splitLookup :: Ord k => k -> Map k a -> (Map k a,Maybe a,Map k a)
+splitLookup :: HasCallStack => Ord k => k -> Map k a -> (Map k a,Maybe a,Map k a)
 splitLookup k0 m = case go k0 m of
      StrictTriple l mv r -> (l, mv, r)
   where
@@ -3870,7 +3876,7 @@ splitLookup k0 m = case go k0 m of
 -- key was present, rather than producing its value. This is used to
 -- implement 'intersection' to avoid allocating unnecessary 'Just'
 -- constructors.
-splitMember :: Ord k => k -> Map k a -> (Map k a,Bool,Map k a)
+splitMember :: HasCallStack => Ord k => k -> Map k a -> (Map k a,Bool,Map k a)
 splitMember k0 m = case go k0 m of
      StrictTriple l mv r -> (l, mv, r)
   where
@@ -3917,7 +3923,7 @@ data StrictTriple a b c = StrictTriple !a !b !c
 {--------------------------------------------------------------------
   Link
 --------------------------------------------------------------------}
-link :: k -> a -> Map k a -> Map k a -> Map k a
+link :: HasCallStack => k -> a -> Map k a -> Map k a -> Map k a
 link kx x Tip r  = insertMin kx x r
 link kx x l Tip  = insertMax kx x l
 link kx x l@(Bin sizeL ky y ly ry) r@(Bin sizeR kz z lz rz)
@@ -3927,7 +3933,7 @@ link kx x l@(Bin sizeL ky y ly ry) r@(Bin sizeR kz z lz rz)
 
 
 -- insertMin and insertMax don't perform potentially expensive comparisons.
-insertMax,insertMin :: k -> a -> Map k a -> Map k a
+insertMax,insertMin :: HasCallStack => k -> a -> Map k a -> Map k a
 insertMax kx x t
   = case t of
       Tip -> singleton kx x
@@ -3943,7 +3949,7 @@ insertMin kx x t
 {--------------------------------------------------------------------
   [link2 l r]: merges two trees.
 --------------------------------------------------------------------}
-link2 :: Map k a -> Map k a -> Map k a
+link2 :: HasCallStack => Map k a -> Map k a -> Map k a
 link2 Tip r   = r
 link2 l Tip   = l
 link2 l@(Bin sizeL kx x lx rx) r@(Bin sizeR ky y ly ry)
@@ -3955,7 +3961,7 @@ link2 l@(Bin sizeL kx x lx rx) r@(Bin sizeR ky y ly ry)
   [glue l r]: glues two trees together.
   Assumes that [l] and [r] are already balanced with respect to each other.
 --------------------------------------------------------------------}
-glue :: Map k a -> Map k a -> Map k a
+glue :: HasCallStack => Map k a -> Map k a -> Map k a
 glue Tip r = r
 glue l Tip = l
 glue l@(Bin sl kl xl ll lr) r@(Bin sr kr xr rl rr)
@@ -3988,7 +3994,7 @@ maxViewSure = go
 -- > deleteFindMin (fromList [(5,"a"), (3,"b"), (10,"c")]) == ((3,"b"), fromList[(5,"a"), (10,"c")])
 -- > deleteFindMin empty                                      Error: can not return the minimal element of an empty map
 
-deleteFindMin :: Map k a -> ((k,a),Map k a)
+deleteFindMin :: HasCallStack => Map k a -> ((k,a),Map k a)
 deleteFindMin t = case minViewWithKey t of
   Nothing -> (error "Map.deleteFindMin: can not return the minimal element of an empty map", Tip)
   Just res -> res
@@ -3998,7 +4004,7 @@ deleteFindMin t = case minViewWithKey t of
 -- > deleteFindMax (fromList [(5,"a"), (3,"b"), (10,"c")]) == ((10,"c"), fromList [(3,"b"), (5,"a")])
 -- > deleteFindMax empty                                      Error: can not return the maximal element of an empty map
 
-deleteFindMax :: Map k a -> ((k,a),Map k a)
+deleteFindMax :: HasCallStack => Map k a -> ((k,a),Map k a)
 deleteFindMax t = case maxViewWithKey t of
   Nothing -> (error "Map.deleteFindMax: can not return the maximal element of an empty map", Tip)
   Just res -> res
@@ -4110,7 +4116,7 @@ balance k x l r = case l of
 
 -- balanceL is called when left subtree might have been inserted to or when
 -- right subtree might have been deleted from.
-balanceL :: k -> a -> Map k a -> Map k a -> Map k a
+balanceL :: HasCallStack => k -> a -> Map k a -> Map k a -> Map k a
 balanceL k x l r = case r of
   Tip -> case l of
            Tip -> Bin 1 k x Tip Tip
@@ -4135,7 +4141,7 @@ balanceL k x l r = case r of
 
 -- balanceR is called when right subtree might have been inserted to or when
 -- left subtree might have been deleted from.
-balanceR :: k -> a -> Map k a -> Map k a -> Map k a
+balanceR :: HasCallStack => k -> a -> Map k a -> Map k a -> Map k a
 balanceR k x l r = case l of
   Tip -> case r of
            Tip -> Bin 1 k x Tip Tip
@@ -4162,7 +4168,7 @@ balanceR k x l r = case l of
 {--------------------------------------------------------------------
   The bin constructor maintains the size of the tree
 --------------------------------------------------------------------}
-bin :: k -> a -> Map k a -> Map k a -> Map k a
+bin :: HasCallStack => k -> a -> Map k a -> Map k a -> Map k a
 bin k x l r
   = Bin (size l + size r + 1) k x l r
 {-# INLINE bin #-}
@@ -4375,9 +4381,52 @@ INSTANCE_TYPEABLE2(Map)
 --  future without notice.
 --
 -- @since 0.5.4
-splitRoot :: Map k b -> [Map k b]
+splitRoot :: HasCallStack => Map k b -> [Map k b]
 splitRoot orig =
   case orig of
     Tip           -> []
     Bin _ k v l r -> [l, singleton k v, r]
 {-# INLINE splitRoot #-}
+
+
+-----------------------------------------------------------------------------------------------
+-- copy-pasted from Data.Map.Internal.Debug, to avoid module cycle
+
+-- | HASURA: we'll try to use this to catch the operation that violates invariants
+assertValid :: HasCallStack => Ord k => Map k a -> Map k a
+assertValid t
+  | not (balanced t) = error "invariant balanced violated!"
+  | not (ordered t) = error "invariant ordered violated!"
+  | not (validsize t) = error "invariant validsize violated!"
+  | otherwise = t
+
+-- | Test if the keys are ordered correctly.
+ordered :: Ord a => Map a b -> Bool
+ordered t
+  = bounded (const True) (const True) t
+  where
+    bounded lo hi t'
+      = case t' of
+          Tip              -> True
+          Bin _ kx _ l r  -> (lo kx) && (hi kx) && bounded lo (<kx) l && bounded (>kx) hi r
+
+-- | Test if a map obeys the balance invariants.
+balanced :: Map k a -> Bool
+balanced t
+  = case t of
+      Tip            -> True
+      Bin _ _ _ l r  -> (size l + size r <= 1 || (size l <= delta*size r && size r <= delta*size l)) &&
+                        balanced l && balanced r
+
+-- | Test if each node of a map reports its size correctly.
+validsize :: Map a b -> Bool
+validsize t = case slowSize t of
+      Nothing -> False
+      Just _ -> True
+  where
+    slowSize Tip = Just 0
+    slowSize (Bin sz _ _ l r) = do
+            ls <- slowSize l
+            rs <- slowSize r
+            guard (sz == ls + rs + 1)
+            return sz
